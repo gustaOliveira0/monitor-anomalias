@@ -1,8 +1,9 @@
 import re
 from datetime import datetime
 
-# Expressão regular para reconhecer os logs
-LOG_PATTERN = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(ERROR|INFO|WARNING)\s+(.*)$')
+LOG_PATTERN = re.compile(
+    r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(ERROR|INFO|WARNING|DEBUG)\] (.*)$'
+)
 
 def parse_log_line(line):
     match = LOG_PATTERN.match(line)

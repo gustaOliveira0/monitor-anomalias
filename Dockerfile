@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY . /app
 
+ENV PYTHONPATH=/app
+
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install pytest
 
-# Permite escolher o comando na hora de rodar
-ENTRYPOINT ["python"]
-CMD ["main.py"]
+CMD ["python", "main.py"]

@@ -1,42 +1,61 @@
+
 import os
 import json
-import pytest
-from output_handler import save_anomaly, ANOMALY_FILE
+from output_handler import save_anomaly
 
-def setup_function():
+ANOMALY_FILE = "anomalies.json"
+
+def clear_anomalies():
     if os.path.exists(ANOMALY_FILE):
-        os.remove(ANOMALY_FILE)
+        with open(ANOMALY_FILE, "w") as f:
+            json.dump([], f)
 
-def test_save_anomaly_creates_file():
+def read_anomalies():
+    if not os.path.exists(ANOMALY_FILE):
+        return []
+    with open(ANOMALY_FILE, "r") as f:
+        return json.load(f)
+
+def test_save_single_anomaly():
+    clear_anomalies()
     anomaly = {
-        "timestamp": "2025-04-18T21:23:32",
+        "timestamp": "2025-04-18T12:00:00",
         "type": "error_spike",
         "message": "Detected 6 ERROR entries in 60 seconds"
     }
     save_anomaly(anomaly)
-    assert os.path.exists(ANOMALY_FILE)
+    data = read_anomalies()
+    assert len(data) == 1
+    assert data[0]["type"] == "error_spike"
 
-    with open(ANOMALY_FILE) as f:
-        data = json.load(f)
-        assert isinstance(data, list)
-        assert anomaly in data
+def test_save_multiple_sorted_anomalies():
+    clear_anomalies()
+    anomalies = [
+        {
+            "timestamp": "2025-04-18T12:01:00",
+            "type": "error_spike",
+            "message": "Another error"
+        },
+        {
+            "timestamp": "2025-04-18T12:00:00",
+            "type": "brute_force",
+            "message": "Detected brute force"
+        }
+    ]
+    for anomaly in anomalies:
+        save_anomaly(anomaly)
+    data = read_anomalies()
+    assert len(data) == 2
+    assert data[0]["timestamp"] < data[1]["timestamp"]
 
-def test_save_anomaly_orders_by_timestamp():
-    anomaly1 = {
-        "timestamp": "2025-04-18T21:23:32",
+def test_handles_empty_file_gracefully():
+    with open(ANOMALY_FILE, "w") as f:
+        f.write("")
+    anomaly = {
+        "timestamp": "2025-04-18T12:00:00",
         "type": "error_spike",
-        "message": "Detected 6 ERROR entries in 60 seconds"
+        "message": "Handled empty file"
     }
-    anomaly2 = {
-        "timestamp": "2025-04-18T21:22:32",
-        "type": "brute_force",
-        "message": "Detected 6 login attempts in the same second"
-    }
-
-    save_anomaly(anomaly1)
-    save_anomaly(anomaly2)
-
-    with open(ANOMALY_FILE) as f:
-        data = json.load(f)
-        assert data[0]["timestamp"] == anomaly2["timestamp"]
-        assert data[1]["timestamp"] == anomaly1["timestamp"]
+    save_anomaly(anomaly)
+    data = read_anomalies()
+    assert any(a["message"] == "Handled empty file" for a in data)
